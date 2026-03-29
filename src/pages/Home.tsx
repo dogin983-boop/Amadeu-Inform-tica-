@@ -42,7 +42,7 @@ export default function Home() {
     <div className="space-y-8">
       <section className="text-center space-y-4 py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
         <h1 className="text-4xl md:text-5xl font-extrabold text-royal-blue tracking-tight">
-          Amadeu <span className="text-gold-beige">informatica</span>
+          Amadeu <span className="text-gold-beige">Informática</span>
         </h1>
         <p className="text-gray-600 max-w-2xl mx-auto text-lg">
           Sua solução completa em tecnologia, papelaria personalizada e entretenimento.

@@ -31,7 +31,7 @@ function Layout({ children, userProfile }: { children: React.ReactNode, userProf
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center space-x-2">
               <Monitor className="w-8 h-8 text-gold-beige" />
-              <span className="text-xl font-bold tracking-tight">Amadeu <span className="text-gold-beige">informatica</span></span>
+              <span className="text-xl font-bold tracking-tight">Amadeu <span className="text-gold-beige">Informática</span></span>
             </Link>
 
             {/* Desktop Nav */}
@@ -107,7 +107,7 @@ function Layout({ children, userProfile }: { children: React.ReactNode, userProf
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex justify-center items-center space-x-2 mb-4">
             <Monitor className="w-6 h-6 text-gold-beige" />
-            <span className="text-white text-lg font-bold">Amadeu informatica</span>
+            <span className="text-white text-lg font-bold">Amadeu Informática</span>
           </div>
           <p className="mb-2">Qualidade e confiança em serviços tech e papelaria.</p>
           <div className="text-sm space-y-1 mb-4">
@@ -115,7 +115,7 @@ function Layout({ children, userProfile }: { children: React.ReactNode, userProf
             <p>📞 (82) 3324-4486</p>
           </div>
           <div className="divider mx-auto w-24 opacity-20"></div>
-          <p className="text-sm">© 2026 Amadeu informatica. Todos os direitos reservados.</p>
+          <p className="text-sm">© 2026 Amadeu Informática. Todos os direitos reservados.</p>
         </div>
       </footer>
       <Toaster position="top-right" richColors />
