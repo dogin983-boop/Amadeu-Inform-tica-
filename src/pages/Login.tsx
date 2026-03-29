@@ -85,7 +85,13 @@ export default function Login({ userProfile, authChecked }: { userProfile: UserP
 
       // Check/Create user profile in Firestore
       const docRef = doc(db, 'users', user.uid);
-      const docSnap = await getDoc(docRef);
+      let docSnap;
+      try {
+        docSnap = await getDoc(docRef);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, `users/${user.uid}`);
+        throw error;
+      }
 
       if (!docSnap.exists()) {
         const role = (finalEmail === 'amadeuadmin@amadeu.com.br' || finalEmail === 'dogin983@gmail.com') ? 'super' : 'client';
@@ -98,17 +104,27 @@ export default function Login({ userProfile, authChecked }: { userProfile: UserP
           lastLogin: new Date().toISOString()
         };
         
-        await setDoc(docRef, {
-          ...newProfile,
-          createdAt: serverTimestamp()
-        });
+        try {
+          await setDoc(docRef, {
+            ...newProfile,
+            createdAt: serverTimestamp()
+          });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+          throw error;
+        }
         
         toast.success(`Bem-vindo, ${newProfile.name}!`);
       } else {
         const profile = docSnap.data() as UserProfile;
-        await setDoc(docRef, { 
-          lastLogin: new Date().toISOString() 
-        }, { merge: true });
+        try {
+          await setDoc(docRef, { 
+            lastLogin: new Date().toISOString() 
+          }, { merge: true });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+          throw error;
+        }
         toast.success(`Bem-vindo de volta, ${profile.name}!`);
       }
     } catch (error: any) {

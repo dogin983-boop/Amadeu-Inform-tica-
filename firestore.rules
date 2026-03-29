@@ -81,9 +81,20 @@ service cloud.firestore {
     // Rules
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
+      
+      // Allow user to create their own profile
       allow create: if isAuthenticated() && isOwner(uid) && isValidUser(request.resource.data) && 
-        (request.resource.data.role == 'client' || 
-         (request.resource.data.role == 'super' && (request.auth.token.email == "dogin983@gmail.com" || request.auth.token.email == "amadeuadmin@amadeu.com.br")));
+        (
+          // Regular clients can always create their own profile
+          request.resource.data.role == 'client' || 
+          // Super admins can create their profile if their email matches the authorized list
+          (request.resource.data.role == 'super' && 
+           (request.auth.token.email == "dogin983@gmail.com" || 
+            request.auth.token.email == "amadeuadmin@amadeu.com.br" ||
+            request.resource.data.email == "amadeuadmin@amadeu.com.br" ||
+            request.resource.data.email == "dogin983@gmail.com"))
+        );
+        
       allow update: if isSuper() || (isOwner(uid) && request.resource.data.role == resource.data.role && isValidUser(request.resource.data));
     }
 
