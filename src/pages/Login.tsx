@@ -41,7 +41,15 @@ export default function Login({ userProfile, authChecked }: { userProfile: UserP
     setLoading(true);
 
     const finalEmail = formatEmail(email);
-    const isAdminCredentials = email === 'Amadeu admin' && password === 'Csw@#$Qeo87';
+    const isAdminCredentials = (email.toLowerCase() === 'amadeu admin' || finalEmail === 'amadeuadmin@amadeu.com.br') && password === 'Csw@#$Qeo87';
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(finalEmail)) {
+      setLoading(false);
+      toast.error('Por favor, insira um e-mail ou usuário válido.');
+      return;
+    }
 
     try {
       let user;
@@ -56,11 +64,19 @@ export default function Login({ userProfile, authChecked }: { userProfile: UserP
           const result = await signInWithEmailAndPassword(auth, finalEmail, password);
           user = result.user;
         } catch (error: any) {
-          // If it's the specific admin credentials and they don't exist, create them
-          if (isAdminCredentials && error.code === 'auth/user-not-found') {
-            const result = await createUserWithEmailAndPassword(auth, finalEmail, password);
-            user = result.user;
-            await updateProfile(user, { displayName: 'Amadeu Admin' });
+          // If it's the specific admin credentials and they don't exist or credentials invalid (enumeration protection), try to create them
+          if (isAdminCredentials && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
+            try {
+              const result = await createUserWithEmailAndPassword(auth, finalEmail, password);
+              user = result.user;
+              await updateProfile(user, { displayName: 'Amadeu Admin' });
+            } catch (createError: any) {
+              // If email already in use, it means the password was wrong (if we got invalid-credential before)
+              if (createError.code === 'auth/email-already-in-use') {
+                throw error; // Throw the original sign-in error
+              }
+              throw createError;
+            }
           } else {
             throw error;
           }
@@ -104,6 +120,10 @@ export default function Login({ userProfile, authChecked }: { userProfile: UserP
       else if (error.code === 'auth/email-already-in-use') message = 'Este e-mail já está em uso.';
       else if (error.code === 'auth/weak-password') message = 'A senha deve ter pelo menos 6 caracteres.';
       else if (error.code === 'auth/invalid-email') message = 'E-mail inválido.';
+      else if (error.code === 'auth/invalid-credential') message = 'E-mail ou senha incorretos.';
+      else if (error.code === 'auth/too-many-requests') message = 'Muitas tentativas. Tente novamente mais tarde.';
+      else if (error.code === 'auth/operation-not-allowed') message = 'O login por e-mail e senha não está ativado no Firebase.';
+      else message = `Erro: ${error.code || error.message || 'Erro desconhecido'}`;
       
       toast.error(message);
     } finally {
