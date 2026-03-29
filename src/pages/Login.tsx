@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth, db } from '../lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { UserProfile } from '../types';
 import { useNavigate } from 'react-router-dom';
@@ -43,18 +43,26 @@ export default function Login({ userProfile }: { userProfile: UserProfile | null
           lastLogin: new Date().toISOString()
         };
         
+      try {
         await setDoc(docRef, {
           ...newProfile,
           createdAt: serverTimestamp()
         });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      }
         
         toast.success(`Bem-vindo, ${newProfile.name}!`);
       } else {
         const profile = docSnap.data() as UserProfile;
         // Update last login
-        await setDoc(docRef, { 
-          lastLogin: new Date().toISOString() 
-        }, { merge: true });
+        try {
+          await setDoc(docRef, { 
+            lastLogin: new Date().toISOString() 
+          }, { merge: true });
+        } catch (error) {
+          handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+        }
         toast.success(`Bem-vindo de volta, ${profile.name}!`);
       }
       

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Appointment, AppointmentStatus } from '../types';
 import { toast } from 'sonner';
 import { Wrench, CheckCircle2, Copy, ArrowRight } from 'lucide-react';
@@ -40,8 +40,7 @@ export default function Scheduling() {
       setTrackingCode(code);
       toast.success('Agendamento realizado com sucesso!');
     } catch (error) {
-      console.error("Error creating appointment:", error);
-      toast.error('Erro ao realizar agendamento. Tente novamente.');
+      handleFirestoreError(error, OperationType.CREATE, 'appointments');
     } finally {
       setLoading(false);
     }

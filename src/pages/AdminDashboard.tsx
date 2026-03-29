@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile, Appointment, Product, GameReservation, Category, AppointmentStatus, UserRole } from '../types';
 import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { toast } from 'sonner';
 import { 
   LayoutDashboard, 
@@ -44,7 +44,7 @@ function AppointmentsManager() {
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
       setAppointments(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
-      console.error("Error fetching appointments:", error);
+      handleFirestoreError(error, OperationType.GET, 'appointments');
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ function AppointmentsManager() {
       toast.success(`Status atualizado para: ${newStatus}`);
       fetchAppointments();
     } catch (error) {
-      toast.error('Erro ao atualizar status.');
+      handleFirestoreError(error, OperationType.UPDATE, `appointments/${id}`);
     }
   };
 
@@ -157,7 +157,7 @@ function ProductsManager() {
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setProducts(data);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      handleFirestoreError(error, OperationType.GET, 'products');
     } finally {
       setLoading(false);
     }
@@ -174,7 +174,7 @@ function ProductsManager() {
       toast.success('Item excluído!');
       fetchProducts();
     } catch (error) {
-      toast.error('Erro ao excluir.');
+      handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
     }
   };
 
@@ -202,7 +202,7 @@ function ProductsManager() {
       setEditingProduct(null);
       fetchProducts();
     } catch (error) {
-      toast.error('Erro ao salvar.');
+      handleFirestoreError(error, editingProduct?.id ? OperationType.UPDATE : OperationType.CREATE, editingProduct?.id ? `products/${editingProduct.id}` : 'products');
     }
   };
 
@@ -222,7 +222,7 @@ function ProductsManager() {
       toast.success('Dados iniciais carregados!');
       fetchProducts();
     } catch (error) {
-      toast.error('Erro ao carregar dados.');
+      handleFirestoreError(error, OperationType.CREATE, 'products');
     }
   };
 
@@ -337,8 +337,7 @@ function TeamManager({ userProfile }: { userProfile: UserProfile | null }) {
         return a.name.localeCompare(b.name);
       }));
     } catch (error) {
-      console.error("Error fetching users:", error);
-      toast.error('Erro ao carregar usuários.');
+      handleFirestoreError(error, OperationType.GET, 'users');
     } finally {
       setLoading(false);
     }
@@ -359,7 +358,7 @@ function TeamManager({ userProfile }: { userProfile: UserProfile | null }) {
       toast.success('Cargo atualizado!');
       fetchUsers();
     } catch (error) {
-      toast.error('Erro ao atualizar cargo.');
+      handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
     }
   };
 

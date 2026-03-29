@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Appointment } from '../types';
 import { toast } from 'sonner';
 import { Search, Wrench, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -32,8 +32,7 @@ export default function Tracking() {
         toast.error('Código não encontrado. Verifique e tente novamente.');
       }
     } catch (error) {
-      console.error("Error searching appointment:", error);
-      toast.error('Erro ao buscar informações.');
+      handleFirestoreError(error, OperationType.GET, 'appointments');
     } finally {
       setLoading(false);
     }

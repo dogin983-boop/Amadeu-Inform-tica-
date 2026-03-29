@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { GameReservation, ReservationDuration } from '../types';
 import { toast } from 'sonner';
 import { Gamepad2, Monitor, Clock, Calendar, CheckCircle2 } from 'lucide-react';
@@ -48,8 +48,7 @@ export default function LanHouse() {
       setSuccess(true);
       toast.success('Reserva realizada com sucesso!');
     } catch (error) {
-      console.error("Error creating reservation:", error);
-      toast.error('Erro ao realizar reserva. Tente novamente.');
+      handleFirestoreError(error, OperationType.CREATE, 'game_reservations');
     } finally {
       setLoading(false);
     }
