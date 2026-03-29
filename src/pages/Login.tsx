@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { LogIn, ShieldCheck, User, Lock, Mail, UserPlus } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export default function Login({ userProfile }: { userProfile: UserProfile | null }) {
+export default function Login({ userProfile, authChecked }: { userProfile: UserProfile | null, authChecked: boolean }) {
   const [loading, setLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
@@ -21,14 +21,14 @@ export default function Login({ userProfile }: { userProfile: UserProfile | null
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (userProfile) {
+    if (authChecked && userProfile) {
       if (userProfile.role === 'super' || userProfile.role === 'admin' || userProfile.role === 'staff') {
         navigate('/admin/dashboard');
       } else {
         navigate('/');
       }
     }
-  }, [userProfile, navigate]);
+  }, [userProfile, authChecked, navigate]);
 
   const formatEmail = (input: string) => {
     if (input.includes('@')) return input;

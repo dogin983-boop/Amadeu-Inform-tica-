@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { UserProfile, Appointment, Product, GameReservation, Category, AppointmentStatus, UserRole } from '../types';
-import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, query, getDocs, doc, updateDoc, deleteDoc, addDoc, serverTimestamp, setDoc, onSnapshot } from 'firebase/firestore';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { toast } from 'sonner';
 import { 
@@ -36,29 +36,24 @@ function AppointmentsManager() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<AppointmentStatus | 'Todos'>('Todos');
 
-  const fetchAppointments = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'appointments'));
-      const querySnapshot = await getDocs(q);
+  useEffect(() => {
+    const q = query(collection(db, 'appointments'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Appointment));
       setAppointments(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, 'appointments');
-    } finally {
       setLoading(false);
-    }
-  };
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'appointments');
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    fetchAppointments();
+    return () => unsubscribe();
   }, []);
 
   const updateStatus = async (id: string, newStatus: AppointmentStatus) => {
     try {
       await updateDoc(doc(db, 'appointments', id), { status: newStatus });
       toast.success(`Status atualizado para: ${newStatus}`);
-      fetchAppointments();
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `appointments/${id}`);
     }
@@ -149,22 +144,18 @@ function ProductsManager() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'products'));
-      const querySnapshot = await getDocs(q);
+  useEffect(() => {
+    const q = query(collection(db, 'products'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
       setProducts(data);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, 'products');
-    } finally {
       setLoading(false);
-    }
-  };
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'products');
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    fetchProducts();
+    return () => unsubscribe();
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -172,7 +163,6 @@ function ProductsManager() {
     try {
       await deleteDoc(doc(db, 'products', id));
       toast.success('Item excluído!');
-      fetchProducts();
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `products/${id}`);
     }
@@ -200,7 +190,6 @@ function ProductsManager() {
       }
       setIsModalOpen(false);
       setEditingProduct(null);
-      fetchProducts();
     } catch (error) {
       handleFirestoreError(error, editingProduct?.id ? OperationType.UPDATE : OperationType.CREATE, editingProduct?.id ? `products/${editingProduct.id}` : 'products');
     }
@@ -220,7 +209,6 @@ function ProductsManager() {
         await addDoc(collection(db, 'products'), p);
       }
       toast.success('Dados iniciais carregados!');
-      fetchProducts();
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, 'products');
     }
@@ -325,26 +313,21 @@ function TeamManager({ userProfile }: { userProfile: UserProfile | null }) {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const q = query(collection(db, 'users'));
-      const querySnapshot = await getDocs(q);
+  useEffect(() => {
+    const q = query(collection(db, 'users'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const data = querySnapshot.docs.map(doc => ({ ...doc.data() } as UserProfile));
-      // Sort by last login or name
       setUsers(data.sort((a, b) => {
         if (a.lastLogin && b.lastLogin) return new Date(b.lastLogin).getTime() - new Date(a.lastLogin).getTime();
         return a.name.localeCompare(b.name);
       }));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, 'users');
-    } finally {
       setLoading(false);
-    }
-  };
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'users');
+      setLoading(false);
+    });
 
-  useEffect(() => {
-    fetchUsers();
+    return () => unsubscribe();
   }, []);
 
   const updateRole = async (uid: string, newRole: UserRole) => {
@@ -356,7 +339,6 @@ function TeamManager({ userProfile }: { userProfile: UserProfile | null }) {
     try {
       await updateDoc(doc(db, 'users', uid), { role: newRole });
       toast.success('Cargo atualizado!');
-      fetchUsers();
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${uid}`);
     }
@@ -470,15 +452,17 @@ function TeamManager({ userProfile }: { userProfile: UserProfile | null }) {
 
 // --- Main Dashboard ---
 
-export default function AdminDashboard({ userProfile }: { userProfile: UserProfile | null }) {
+export default function AdminDashboard({ userProfile, authChecked }: { userProfile: UserProfile | null, authChecked: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    if (!userProfile || (userProfile.role !== 'super' && userProfile.role !== 'admin' && userProfile.role !== 'staff')) {
-      navigate('/admin');
+    if (authChecked) {
+      if (!userProfile || (userProfile.role !== 'super' && userProfile.role !== 'admin' && userProfile.role !== 'staff')) {
+        navigate('/admin');
+      }
     }
-  }, [userProfile, navigate]);
+  }, [userProfile, authChecked, navigate]);
 
   const menuItems = [
     { path: '/admin/dashboard/appointments', label: 'Ordens de Serviço', icon: Wrench },

@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth, db } from './lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { UserProfile } from './types';
 import { Toaster } from 'sonner';
 import { Menu, X, Monitor, Gamepad2, Wrench, Search, LayoutDashboard, LogOut, User } from 'lucide-react';
@@ -126,27 +126,53 @@ function Layout({ children, userProfile }: { children: React.ReactNode, userProf
 export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    let unsubscribeProfile: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (unsubscribeProfile) {
+        unsubscribeProfile();
+        unsubscribeProfile = null;
+      }
+
       if (user) {
         const docRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setUserProfile(docSnap.data() as UserProfile);
-        } else {
-          // If user exists in Auth but not in Firestore, we might need to create it or handle it
-          // For now, assume admin email is super admin
-          if (user.email === 'dogin983@gmail.com' || user.email === 'amadeuadmin@amadeu.com.br') {
-             setUserProfile({ uid: user.uid, email: user.email!, name: 'Super Admin', role: 'super' });
-          }
+        
+        try {
+          // Subscribe to changes immediately
+          unsubscribeProfile = onSnapshot(docRef, (doc) => {
+            if (doc.exists()) {
+              setUserProfile(doc.data() as UserProfile);
+            } else if (user.email === 'dogin983@gmail.com' || user.email === 'amadeuadmin@amadeu.com.br') {
+              setUserProfile({ uid: user.uid, email: user.email!, name: 'Super Admin', role: 'super' });
+            } else {
+              setUserProfile(null);
+            }
+            setLoading(false);
+            setAuthChecked(true);
+          }, (error) => {
+            console.error("Profile snapshot error:", error);
+            setLoading(false);
+            setAuthChecked(true);
+          });
+        } catch (error) {
+          console.error("Error setting up profile snapshot:", error);
+          setLoading(false);
+          setAuthChecked(true);
         }
       } else {
         setUserProfile(null);
+        setLoading(false);
+        setAuthChecked(true);
       }
-      setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeProfile) unsubscribeProfile();
+    };
   }, []);
 
   if (loading) {
@@ -165,9 +191,9 @@ export default function App() {
           <Route path="/agendamento" element={<Scheduling />} />
           <Route path="/lanhouse" element={<LanHouse />} />
           <Route path="/acompanhar" element={<Tracking />} />
-          <Route path="/login" element={<Login userProfile={userProfile} />} />
-          <Route path="/admin" element={<Login userProfile={userProfile} />} />
-          <Route path="/admin/dashboard/*" element={<AdminDashboard userProfile={userProfile} />} />
+          <Route path="/login" element={<Login userProfile={userProfile} authChecked={authChecked} />} />
+          <Route path="/admin" element={<Login userProfile={userProfile} authChecked={authChecked} />} />
+          <Route path="/admin/dashboard/*" element={<AdminDashboard userProfile={userProfile} authChecked={authChecked} />} />
         </Routes>
       </Layout>
     </Router>
