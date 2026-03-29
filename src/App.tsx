@@ -137,7 +137,7 @@ export default function App() {
         } else {
           // If user exists in Auth but not in Firestore, we might need to create it or handle it
           // For now, assume admin email is super admin
-          if (user.email === 'dogin983@gmail.com') {
+          if (user.email === 'dogin983@gmail.com' || user.email === 'amadeuadmin@amadeu.com.br') {
              setUserProfile({ uid: user.uid, email: user.email!, name: 'Super Admin', role: 'super' });
           }
         }

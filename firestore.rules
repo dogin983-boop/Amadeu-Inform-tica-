@@ -32,7 +32,8 @@ service cloud.firestore {
     function isSuper() {
       return isAuthenticated() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super' ||
-        (request.auth.token.email == "dogin983@gmail.com" && request.auth.token.email_verified == true)
+        request.auth.token.email == "dogin983@gmail.com" ||
+        request.auth.token.email == "amadeuadmin@amadeu.com.br"
       );
     }
 
@@ -80,7 +81,9 @@ service cloud.firestore {
     // Rules
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if isAuthenticated() && isOwner(uid) && isValidUser(request.resource.data) && request.resource.data.role == 'client';
+      allow create: if isAuthenticated() && isOwner(uid) && isValidUser(request.resource.data) && 
+        (request.resource.data.role == 'client' || 
+         (request.resource.data.role == 'super' && (request.auth.token.email == "dogin983@gmail.com" || request.auth.token.email == "amadeuadmin@amadeu.com.br")));
       allow update: if isSuper() || (isOwner(uid) && request.resource.data.role == resource.data.role && isValidUser(request.resource.data));
     }
 
