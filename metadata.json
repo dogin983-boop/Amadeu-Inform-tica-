@@ -1,0 +1,7 @@
+{
+  "name": "Amadeu informatica",
+  "description": "Amadeu informatica - Plataforma completa para gestão de serviços de Lan House, Papelaria e Manutenção Técnica.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

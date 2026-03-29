@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: uid, email, name, role (super, admin, staff, client), lastLogin
+    //
+    // Collection: products
+    // Fields: name, description, price, category, imageUrl, active
+    //
+    // Collection: appointments
+    // Fields: customerName, phone, equipment, defectDescription, status, trackingCode, createdAt
+    //
+    // Collection: game_reservations
+    // Fields: customerName, machineId, startTime, duration, createdAt
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUserEmail(email) {
+      return isAuthenticated() && request.auth.token.email == email;
+    }
+
+    function isSuper() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super' ||
+        (request.auth.token.email == "dogin983@gmail.com" && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        isSuper()
+      );
+    }
+
+    function isStaff() {
+      return isAuthenticated() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff' ||
+        isAdmin()
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.price is number && data.price >= 0 &&
+             data.category in ["Lan House", "Papelaria", "Tech", "Fotografia", "Topos de Bolo", "Manutenção"] &&
+             data.active is bool;
+    }
+
+    function isValidAppointment(data) {
+      return data.customerName is string && data.customerName.size() > 0 && data.customerName.size() < 100 &&
+             data.phone is string && data.phone.size() > 0 && data.phone.size() < 20 &&
+             data.equipment is string && data.equipment.size() > 0 && data.equipment.size() < 100 &&
+             data.trackingCode is string && data.trackingCode.size() > 0;
+    }
+
+    function isValidUser(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && data.role in ['super', 'admin', 'staff', 'client'];
+    }
+
+    // Rules
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(uid) && isValidUser(request.resource.data) && request.resource.data.role == 'client';
+      allow update: if isSuper() || (isOwner(uid) && request.resource.data.role == resource.data.role && isValidUser(request.resource.data));
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isStaff() && isValidProduct(request.resource.data);
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isStaff() || (isAuthenticated() && resource.data.trackingCode == request.query.trackingCode);
+      allow create: if isValidAppointment(request.resource.data);
+      allow update, delete: if isStaff();
+    }
+
+    match /game_reservations/{reservationId} {
+      allow read: if isStaff();
+      allow create: if isAuthenticated();
+      allow update, delete: if isStaff();
+    }
+  }
+}
